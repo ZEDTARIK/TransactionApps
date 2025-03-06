@@ -1,0 +1,83 @@
+﻿@model IEnumerable<TransactionsApps.Models.Transaction>
+
+@{
+    ViewData["Title"] = "Transaction";
+}
+
+
+
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1> <i class="fa-solid fa-money-bill"></i> PassBook</h1>
+
+        <table class="table table-hover table-bordered">
+            <thead>
+                <tr>
+                    <th>
+    @Html.DisplayNameFor(model => model.First().AccountNumber)
+</th>
+
+                    <th>
+                        @Html.DisplayNameFor(model => model.BankName)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.SWIFTCode)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Amount)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.DateCreation)
+                    </th>
+                    <th>
+                        <a asp-action="AddOrEdit" class="btn btn-sm btn-success">
+                            <i class="fa-solid fa-plus"></i>
+                            Create New
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.AccountNumber)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.BankName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.SWIFTCode)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Amount)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.DateCreation)
+                        </td>
+                        <td>
+                            <form asp-action="Delete" asp-route-id="@item.TransactionId" method="post">
+
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="AddOrEdit" asp-route-id="@item.TransactionId" class="btn btn-warning btn-sm">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                </a>
+
+                                    <button  type="submit" class="btn btn-danger btn-sm" 
+                                    onclick="return confirm('Are you sure to delete this operations?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                               
+                            </div>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
