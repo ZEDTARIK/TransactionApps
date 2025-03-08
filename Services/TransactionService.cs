@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using TransactionsApps.helper;
 using TransactionsApps.Models;
 
 namespace TransactionsApps.Services
@@ -6,15 +8,36 @@ namespace TransactionsApps.Services
     public class TransactionService : ITransactionService
     {
         private readonly TransactionDbContext _context;
+        private readonly IMemoryCache _cache;
+        private readonly string _cacheKey = "Transactions";
+        private readonly TimeSpan timeSpan = TimeSpan.FromMilliseconds(300);
 
-        public TransactionService(TransactionDbContext context)
+        public TransactionService(TransactionDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
+
+        public async Task<PaginatedList<Transaction>> GetTransactionsAsync(int pageNumber, int pageSize)
+        {
+            var query = _context.Transactions
+                    .AsNoTracking().OrderByDescending(t => t.TransactionId);
+            return await PaginatedList<Transaction>.CreateAsync(query, pageNumber, pageSize);
+        }
+
 
         public async Task<List<Transaction>> GetAllTransactionsAsync()
         {
-            return await _context.Transactions.AsNoTracking().ToListAsync();
+            if (!_cache.TryGetValue(_cacheKey, out List<Transaction>? transactions))
+            {
+                transactions = await _context.Transactions
+                        .AsNoTracking().OrderByDescending(t => t.TransactionId).ToListAsync();
+
+                // Ajouter les transactions en cache
+                _cache.Set(_cacheKey, transactions, timeSpan);
+            }
+
+            return transactions ?? new List<Transaction>();
         }
 
         public async Task<Transaction?> GetTransactionByIdAsync(int id)
