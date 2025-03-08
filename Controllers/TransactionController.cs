@@ -18,6 +18,8 @@ namespace TransactionsApps.Controllers
             return View(await _transactionService.GetAllTransactionsAsync());
         }
 
+
+
         public async Task<IActionResult> AddOrEdit(int id = 0)
         {
             if (id == 0)
