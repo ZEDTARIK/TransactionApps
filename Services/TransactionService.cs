@@ -5,18 +5,12 @@ using TransactionsApps.Models;
 
 namespace TransactionsApps.Services
 {
-    public class TransactionService : ITransactionService
+    public class TransactionService(TransactionDbContext context, IMemoryCache cache) : ITransactionService
     {
-        private readonly TransactionDbContext _context;
-        private readonly IMemoryCache _cache;
+        private readonly TransactionDbContext _context = context;
+        private readonly IMemoryCache _cache = cache;
         private readonly string _cacheKey = "Transactions";
         private readonly TimeSpan timeSpan = TimeSpan.FromMilliseconds(300);
-
-        public TransactionService(TransactionDbContext context, IMemoryCache cache)
-        {
-            _context = context;
-            _cache = cache;
-        }
 
         public async Task<PaginatedList<Transaction>> GetTransactionsAsync(int pageNumber, int pageSize)
         {
@@ -37,7 +31,7 @@ namespace TransactionsApps.Services
                 _cache.Set(_cacheKey, transactions, timeSpan);
             }
 
-            return transactions ?? new List<Transaction>();
+            return transactions ?? [];
         }
 
         public async Task<Transaction?> GetTransactionByIdAsync(int id)

@@ -4,14 +4,9 @@ using TransactionsApps.Services;
 
 namespace TransactionsApps.Controllers
 {
-    public class TransactionController : Controller
+    public class TransactionController(ITransactionService transactionService) : Controller
     {
-        private readonly ITransactionService _transactionService;
-
-        public TransactionController(ITransactionService transactionService)
-        {
-            _transactionService = transactionService;
-        }
+        private readonly ITransactionService _transactionService = transactionService;
 
         public async Task<IActionResult> Index()
         {
