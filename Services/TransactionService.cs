@@ -32,17 +32,25 @@ namespace TransactionsApps.Services
 
         public async Task AddOrUpdateTransactionAsync(Transaction transaction)
         {
-            if (transaction.TransactionId == 0)
+            if (transaction.TransactionId == 0) // Nouvelle transaction
             {
                 transaction.DateCreation = DateTime.Now;
-                _context.Add(transaction);
+                await _context.Transactions.AddAsync(transaction);
             }
-            else
+            else // Vérification avant mise à jour
             {
-                _context.Update(transaction);
+                var existingTransaction = await _context.Transactions.FindAsync(transaction.TransactionId);
+                if (existingTransaction == null)
+                {
+                    throw new Exception("Transaction introuvable.");
+                }
+
+                _context.Entry(existingTransaction).CurrentValues.SetValues(transaction);
             }
+
             await _context.SaveChangesAsync();
         }
+
 
         public async Task DeleteTransactionAsync(int id)
         {
