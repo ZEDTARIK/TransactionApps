@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using TransactionsApps.helper;
 using TransactionsApps.Models;
 
 namespace TransactionsApps.Services
@@ -11,14 +10,6 @@ namespace TransactionsApps.Services
         private readonly IMemoryCache _cache = cache;
         private readonly string _cacheKey = "Transactions";
         private readonly TimeSpan timeSpan = TimeSpan.FromMilliseconds(300);
-
-        public async Task<PaginatedList<Transaction>> GetTransactionsAsync(int pageNumber, int pageSize)
-        {
-            var query = _context.Transactions
-                    .AsNoTracking().OrderByDescending(t => t.TransactionId);
-            return await PaginatedList<Transaction>.CreateAsync(query, pageNumber, pageSize);
-        }
-
 
         public async Task<List<Transaction>> GetAllTransactionsAsync()
         {
