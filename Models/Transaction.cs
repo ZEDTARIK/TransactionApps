@@ -3,6 +3,19 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TransactionsApps.Models
 {
+    /*
+     Code SQL : 
+
+    CREATE TABLE [Transactions] (
+      [TransactionId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+      [AccountNumber] NVARCHAR(50) NOT NULL,
+      [BankName]      NVARCHAR(20) NOT NULL,
+      [SWIFTCode]     NVARCHAR(5)  NOT NULL,
+      [Amount]        DECIMAL(18,2) NOT NULL,
+      [DateCreation]  DATETIME2 NOT NULL
+    );
+     */
+
     public class Transaction
     {
         [Key]
@@ -11,7 +24,7 @@ namespace TransactionsApps.Models
         [Column(TypeName = "nvarchar(50)")]
         [Required(ErrorMessage = "This field is required!")]
         [MaxLength(50)]
-        [Display(Name = "Account Number")]
+        [Display(Name = "Account Number")] // For UI Razor 
         public string AccountNumber { get; set; }
 
         [Column(TypeName = "nvarchar(20)")]

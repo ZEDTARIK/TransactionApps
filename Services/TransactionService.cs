@@ -1,66 +1,110 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using TransactionsApps.Models;
 
 namespace TransactionsApps.Services
 {
-    public class TransactionService(TransactionDbContext context, IMemoryCache cache) : ITransactionService
+    public class TransactionService : ITransactionService
     {
-        private readonly TransactionDbContext _context = context;
-        private readonly IMemoryCache _cache = cache;
-        private readonly string _cacheKey = "Transactions";
-        private readonly TimeSpan timeSpan = TimeSpan.FromMilliseconds(300);
+        private readonly TransactionDbContext _context;
+        private readonly IMemoryCache _cache;
+        private readonly ILogger<TransactionService> _logger;
+
+        private const string CacheKey_All = "Transactions:All";
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30); // ← TTL utile
+
+        public TransactionService(TransactionDbContext context, IMemoryCache cache, ILogger<TransactionService> logger)
+        {
+            _context = context;
+            _cache = cache;
+            _logger = logger;
+        }
 
         public async Task<List<Transaction>> GetAllTransactionsAsync()
         {
-            if (!_cache.TryGetValue(_cacheKey, out List<Transaction>? transactions))
+            // GetOrCreateAsync simplifie la lecture + mise en cache
+            return await _cache.GetOrCreateAsync(CacheKey_All, async entry =>
             {
-                transactions = await _context.Transactions
-                        .AsNoTracking().OrderByDescending(t => t.TransactionId).ToListAsync();
+                entry.AbsoluteExpirationRelativeToNow = CacheTtl;
+                entry.SetPriority(CacheItemPriority.Normal);
+                // entry.RegisterPostEvictionCallback((key, value, reason, state) => { /* log si besoin */ });
 
-                // Ajouter les transactions en cache
-                _cache.Set(_cacheKey, transactions, timeSpan);
-            }
-
-            return transactions ?? [];
+                return await _context.Transactions
+                    .AsNoTracking()
+                    .OrderByDescending(t => t.DateCreation) // tri souvent plus pertinent
+                    .ToListAsync();
+            }) ?? new List<Transaction>();
         }
 
         public async Task<Transaction?> GetTransactionByIdAsync(int id)
         {
-            return await _context.Transactions.FindAsync(id);
+            // Lecture pure → AsNoTracking
+            return await _context.Transactions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TransactionId == id);
         }
 
         public async Task AddOrUpdateTransactionAsync(Transaction transaction)
         {
-            if (transaction.TransactionId == 0) // Nouvelle transaction
+            try
             {
-                transaction.DateCreation = DateTime.Now;
-                await _context.Transactions.AddAsync(transaction);
-            }
-            else // Vérification avant mise à jour
-            {
-                var existingTransaction = await _context.Transactions.FindAsync(transaction.TransactionId);
-                if (existingTransaction == null)
+                if (transaction.TransactionId == 0)
                 {
-                    throw new Exception("Transaction introuvable.");
+                    if (transaction.DateCreation == default)
+                        transaction.DateCreation = DateTime.UtcNow; // UTC recommandé
+                    await _context.Transactions.AddAsync(transaction);
+                }
+                else
+                {
+                    // Option 1 : mise à jour “attach + Modified” (simple et sûre)
+                    _context.Attach(transaction);
+                    _context.Entry(transaction).State = EntityState.Modified;
+
+                    // Option 2 (ton approche) :
+                    // var existing = await _context.Transactions.FindAsync(transaction.TransactionId);
+                    // if (existing is null) throw new KeyNotFoundException("Transaction introuvable.");
+                    // _context.Entry(existing).CurrentValues.SetValues(transaction);
                 }
 
-                _context.Entry(existingTransaction).CurrentValues.SetValues(transaction);
+                await _context.SaveChangesAsync();
+
+                InvalidateCache(); // ← invalider après écriture
             }
-
-            await _context.SaveChangesAsync();
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogWarning(ex, "Conflit de concurrence sur Transaction {Id}", transaction.TransactionId);
+                throw; // ou re-lancer une exception métier
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Erreur de mise à jour SQL (validation schéma/contraintes).");
+                throw; // ex: string truncation si SWIFT trop long
+            }
         }
-
 
         public async Task DeleteTransactionAsync(int id)
         {
-            var transaction = await _context.Transactions.FindAsync(id);
-            if (transaction != null)
+            // Suppression sans round-trip : stub
+            var stub = new Transaction { TransactionId = id };
+            _context.Transactions.Attach(stub);
+            _context.Transactions.Remove(stub);
+
+            try
             {
-                _context.Transactions.Remove(transaction);
                 await _context.SaveChangesAsync();
+                InvalidateCache();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Si l’ID n’existe plus, 0 lignes affectées → on peut ignorer ou remonter un 404 métier
+                throw new KeyNotFoundException("Transaction introuvable.");
             }
         }
-    }
 
+        private void InvalidateCache()
+        {
+            _cache.Remove(CacheKey_All);
+        }
+    }
 }
