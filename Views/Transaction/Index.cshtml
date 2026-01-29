@@ -4,8 +4,19 @@
     ViewData["Title"] = "Transaction";
 }
 
+<div class="row">
+    <div class="col-sm-12">
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="alert alert-success">@ok</div>
+        }
+        @if (TempData["Error"] is string ko)
+        {
+            <div class="alert alert-danger">@ko</div>
+        }
 
-
+    </div>
+</div>
 
 <div class="row">
     <div class="col-md-8 offset-md-2">
@@ -15,8 +26,8 @@
             <thead>
                 <tr>
                     <th>
-    @Html.DisplayNameFor(model => model.First().AccountNumber)
-</th>
+                        @Html.DisplayNameFor(model => model.First().AccountNumber)
+                    </th>
 
                     <th>
                         @Html.DisplayNameFor(model => model.BankName)
@@ -80,4 +91,23 @@
     </div>
 </div>
 
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <nav aria-label="...">
+            <ul class="pagination pagination-sm">
+                <li class="page-item disabled">
+                    <a class="page-link">Previous</a>
+                </li>
+                <li class="page-item"><a class="page-link" href="#">1</a></li>
+                <li class="page-item active" aria-current="page">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
 
